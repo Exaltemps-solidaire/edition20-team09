@@ -5,8 +5,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
+RUN node scripts/generate-csp-hashes.mjs out nginx.conf nginx.generated.conf
 
 FROM docker.io/library/nginx:1.27-alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/nginx.generated.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/out /usr/share/nginx/html
 EXPOSE 80
