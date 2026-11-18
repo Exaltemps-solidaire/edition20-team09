@@ -4,7 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PERSONAS } from "../personas";
 
-type Ressource = { id: string; deposant: string; contenu: string; deposeLe: string };
+type Fiche = { titre: string; categorie: string; resume: string } | { nonExploitable: true };
+type Ressource = { id: string; deposant: string; contenu: string; deposeLe: string; fiche?: Fiche };
 
 export default function Depot() {
   const router = useRouter();
@@ -75,6 +76,15 @@ export default function Depot() {
         {ressources.map((ressource) => (
           <li key={ressource.id}>
             <strong>{ressource.deposant}</strong> — {ressource.contenu}
+            {ressource.fiche && "nonExploitable" in ressource.fiche && (
+              <p><em>L&apos;IA n&apos;a pas trouvé de texte exploitable (lien seul, sans contenu collé).</em></p>
+            )}
+            {ressource.fiche && !("nonExploitable" in ressource.fiche) && (
+              <div>
+                <p><strong>{ressource.fiche.titre}</strong> ({ressource.fiche.categorie})</p>
+                <p>{ressource.fiche.resume}</p>
+              </div>
+            )}
           </li>
         ))}
       </ul>

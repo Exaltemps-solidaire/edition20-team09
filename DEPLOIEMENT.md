@@ -13,16 +13,18 @@ suivante y ajoutera une proposition de fiche générée par IA, à reprendre dan
 
 ## Services externes
 
-Aucun pour cette itération. Une itération suivante appellera la passerelle LLM de la
-plateforme (`LLM_BASE_URL` / `LLM_API_KEY`) pour analyser les ressources déposées ; si elle
-tombe, le dépôt de ressources restera fonctionnel, seule l'analyse IA sera indisponible.
+- Passerelle LLM de la plateforme (`llm.internal`, mode `anthropic`, alias `task:cheap`) :
+  l'API appelle `POST /v1/chat/completions` avec la clé virtuelle de l'équipe
+  (`LLM_API_KEY`, lue depuis l'environnement, publiée dans `secret/core/llm-vkeys` sous le
+  champ `team09`). Si elle tombe ou répond en erreur, le dépôt reste fonctionnel : seule la
+  fiche proposée est absente de la ressource (dégradé, pas d'échec de la requête).
 
 ## Connu comme fragile ou inachevé
 
 - **Stockage en mémoire** : les ressources déposées sont perdues à chaque redémarrage du
   service `api`. Pas de base de données à ce stade.
-- Pas encore d'analyse IA ni de publication vers Notion (prévues à l'itération suivante,
-  simulée dans un premier temps faute de jeton d'intégration Notion).
+- Pas encore de publication vers Notion (prévue à l'itération suivante, simulée dans un
+  premier temps faute de jeton d'intégration Notion).
 
 ## Contact
 

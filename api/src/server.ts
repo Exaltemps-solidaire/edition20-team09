@@ -22,7 +22,7 @@ function lireCorpsJson(req: IncomingMessage): Promise<unknown> {
 
 const serveur = createServer(async (req, res) => {
   const corpsRequete = req.method === "POST" ? await lireCorpsJson(req) : undefined;
-  const { statut, corps } = router(req.method ?? "GET", req.url ?? "/", corpsRequete);
+  const { statut, corps } = await router(req.method ?? "GET", req.url ?? "/", corpsRequete);
   if (corps === undefined) {
     res.writeHead(statut).end();
   } else {

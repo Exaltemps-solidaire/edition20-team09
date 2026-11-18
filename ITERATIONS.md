@@ -59,23 +59,42 @@ Le développeur a demandé un virage complet, confirmé comme validé par les ca
     - `podman-compose.yml` — services `frontend` (8080) et `api` (8081) sur `core-network` ; sert le point 4 de la DoD.
     - `e2e/demo.spec.ts` — étapes "Je choisis mon rôle" et "Je dépose une ressource" ajoutées à la démo.
 
-## Itération 2 (⚠️ sous réserve de temps) : Chaque ressource déposée reçoit une proposition de fiche organisée par l'IA
+## Itération 2 — Plan validé le 2026-11-18 (réduit, ✂️ voir note) : Chaque ressource déposée reçoit une proposition de fiche organisée par l'IA
 
-- **Dans le périmètre** : appel à la passerelle LLM (`llm.internal`, mode `anthropic`, texte seul) sur le contenu déposé, affichage d'une proposition de fiche (titre, catégorie, résumé court) à côté de la ressource, bouton "Publier vers Notion" qui affiche un statut simulé (mock, pas d'appel réseau réel).
-- **Hors périmètre** : vraie écriture Notion, extraction de contenu depuis une URL/PDF, historique des versions d'une fiche.
+- ✂️ **Temps restant déclaré au début de cette itération : 15 minutes** — insuffisant pour la capacité standard (≈25 min : 10 codage + 5 publication + 10 tour de test). Décision du développeur : version minimale, publier et signaler **sans attendre un tour de test complet de l'équipe**. Le bouton "Publier vers Notion" et son test dédié sont retirés du périmètre de cette itération pour tenir le budget ; ils repassent en "À venir".
+- **Dans le périmètre** : appel à la passerelle LLM (`llm.internal`, mode `anthropic`, texte seul) sur le contenu déposé, affichage d'une proposition de fiche (titre, catégorie, résumé court) à côté de la ressource.
+- **Hors périmètre (reporté)** : bouton "Publier vers Notion" (même simulé), vraie écriture Notion, extraction de contenu depuis une URL/PDF, historique des versions d'une fiche.
 - **Critères d'acceptation** :
   - Étant donné une ressource déposée sous forme de texte exploitable, quand l'IA l'analyse, alors une proposition de fiche (titre, catégorie, résumé) s'affiche à côté de la ressource.
   - Étant donné une ressource sans contenu exploitable (ex. un lien seul, sans texte collé), quand l'IA l'analyse, alors elle l'indique explicitement plutôt que d'inventer une fiche.
-  - Étant donné une fiche proposée, quand on clique "Publier vers Notion", alors un statut "publication simulée" s'affiche, sans appel réseau vers Notion.
 - **Hypothèse de l'équipe couverte** : aucune — à faire confirmer par les cadreurs, comme pour l'itération 1.
-- **Codage estimé** : 10 minutes
-- **Fichiers prévus** : `api/src/routes.ts` (déclenchement de l'analyse), `api/src/llm.ts` (appel passerelle + prompt), `api/src/notion-mock.ts` (client simulé), `frontend/src/app/depot/page.tsx` (affichage fiche + bouton publier).
-- **Tests unitaires prévus** : 1 à 3, sur la logique pure de détection "contenu exploitable / pas exploitable" et le formatage de la proposition (sans appeler le vrai LLM).
-- **Étapes ajoutées à la démo** : déposer un texte, voir la fiche proposée, cliquer "Publier vers Notion", voir le statut simulé.
-- **Bilan** : _à remplir en fin d'itération._
+- **Codage estimé** : 8 minutes (réduit du fait du temps restant)
+- **Fichiers prévus** : `api/src/routes.ts` (déclenchement de l'analyse), `api/src/llm.ts` (appel passerelle + prompt + détection contenu exploitable), `frontend/src/app/depot/page.tsx` (affichage fiche).
+- **Tests unitaires prévus** : 1 à 3, sur la logique pure de détection "contenu exploitable / pas exploitable" (sans appeler le vrai LLM).
+- **Étapes ajoutées à la démo** : déposer un texte, voir la fiche proposée (si le temps le permet).
+- **Bilan** :
+  - **Temps restant déclaré en début d'itération** : 15 minutes.
+  - **Durée de codage réelle** : 2 minutes (budget réduit 8 min, aucun dépassement).
+  - **Critères satisfaits** : les 2 critères d'acceptation retenus — fiche (titre/catégorie/résumé) affichée pour un texte exploitable, message explicite pour un lien seul sans texte collé. Vérifiés en local par appel direct à l'API après déploiement.
+  - **Reporté** : le bouton "Publier vers Notion" (même mock) et son test, retirés du périmètre dès la DoR faute de temps ; voir "À venir" #1.
+  - **Décision développeur sur le temps** : vu la contrainte de 15 minutes, scope réduit à la version minimale (sans bouton Notion) et publication/signal **sans tour de test PM Lab préalable** — le tour de test se fera après coup, sur la version déjà en ligne.
+  - **Ce que le harnais a bloqué ou refusé** : rien — `npm test` passe (8 tests), `verifier-deployabilite.sh` ne signale aucune borne ni alarme.
+  - **Point technique rencontré et corrigé pendant l'itération** : la clé virtuelle de la passerelle LLM (`secret/core/llm-vkeys`, champ `team09`) n'existait pas encore — générée et publiée via OpenBao, puis `apisix/seed-and-deploy.sh` rejoué pour créer le consumer APISIX côté `llm.internal`. Le modèle (`task:cheap`) entourait parfois sa réponse de balises markdown (```` ```json ... ``` ````) malgré la consigne de ne répondre qu'en JSON : corrigé par une extraction du premier bloc `{...}` (`extraireJson`), testée unitairement.
+  - **Modifications** :
+    - `api/src/llm.ts` — appel à `llm.internal` (alias `task:cheap`), détection pure "contenu exploitable" (`estContenuExploitable`), extraction JSON tolérante au markdown (`extraireJson`) ; sert les 2 critères.
+    - `api/src/llm.test.ts` — 3 tests Vitest sur `estContenuExploitable` et `extraireJson`, sans appeler le vrai LLM ; sert le point 2 de la DoD.
+    - `api/src/ressources.ts` — champ `fiche` sur `Ressource`, fonction `attacherFiche` ; sert l'affichage à côté de la ressource.
+    - `api/src/routes.ts` — après un dépôt, appelle `proposerFiche` et attache le résultat ; dégradé silencieux (avec `console.error`) si la passerelle LLM échoue, pour ne jamais faire échouer le dépôt ; `router` devient asynchrone.
+    - `api/src/server.ts`, `api/src/routes.test.ts` — adaptés à un `router` asynchrone (`await`).
+    - `frontend/src/app/depot/page.tsx` — affichage de la fiche proposée (titre/catégorie/résumé) ou du message "non exploitable" à côté de chaque ressource.
+    - `.env.example` — ajout de `LLM_API_KEY` (documentée, sans valeur) ; `.env` local (gitignoré) porte la vraie clé virtuelle.
+    - `podman-compose.yml` — `LLM_BASE_URL` et `LLM_API_KEY` (`${LLM_API_KEY}`) injectées au service `api`.
+    - `DEPLOIEMENT.md` — section "Services externes" mise à jour (passerelle LLM, mode dégradé).
+    - `e2e/demo.spec.ts` — étape "L'IA propose une fiche" ajoutée (non rejouée faute de temps ; hors DoD, ne bloque rien).
 
 ## À venir (liste ordonnée, détaillée au fil de l'eau)
 
-1. Vraie écriture dans Notion, si un jeton d'intégration est fourni par l'équipe.
-2. Extraction réelle de contenu depuis une URL ou un document joint (scraping / parsing).
-3. Stabilisation finale pour le pitch, si le temps restant ne permet plus qu'une itération.
+1. Bouton "Publier vers Notion" (mock, statut simulé) — reporté de l'itération 2 faute de temps.
+2. Vraie écriture dans Notion, si un jeton d'intégration est fourni par l'équipe.
+3. Extraction réelle de contenu depuis une URL ou un document joint (scraping / parsing).
+4. Stabilisation finale pour le pitch, si le temps restant ne permet plus qu'une itération.

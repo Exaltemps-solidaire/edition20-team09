@@ -11,3 +11,6 @@ services:
     image: localhost:5000/team09/api:dev
     networks: [core-network]
     ports: ["8081:8081"]
+    environment:
+      LLM_BASE_URL: http://llm.internal:9080/v1
+      LLM_API_KEY: ${LLM_API_KEY}

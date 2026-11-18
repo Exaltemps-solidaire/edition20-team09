@@ -19,4 +19,12 @@ test("Démo : le cas passant", async ({ page }) => {
     await page.getByRole("button", { name: "Déposer" }).click();
     await expect(page.getByText("https://exemple.org/droits-apres-diagnostic")).toBeVisible();
   });
+
+  await test.step("L'IA propose une fiche pour une ressource avec du texte", async () => {
+    await page.getByPlaceholder("Collez un lien ou un texte à organiser").fill(
+      "Guide pratique pour accompagner les bénévoles sur un stand de sensibilisation.",
+    );
+    await page.getByRole("button", { name: "Déposer" }).click();
+    await expect(page.getByText(/Guides et formations|résumé|Guide/i).first()).toBeVisible({ timeout: 15000 });
+  });
 });

@@ -2,11 +2,14 @@
 // Pas de base de données à ce stade (itération 1) : les données ne survivent pas à un
 // redémarrage du service — limite connue, documentée dans DEPLOIEMENT.md.
 
+import type { AnalyseFiche } from "./llm.ts";
+
 export type Ressource = {
   id: string;
   deposant: string;
   contenu: string;
   deposeLe: string;
+  fiche?: AnalyseFiche;
 };
 
 export type DepotInvalide = { erreur: string };
@@ -32,4 +35,9 @@ export function deposerRessource(deposant: unknown, contenu: unknown): Ressource
 
 export function listerRessources(): Ressource[] {
   return [...ressources].reverse();
+}
+
+export function attacherFiche(id: string, fiche: AnalyseFiche): void {
+  const ressource = ressources.find((r) => r.id === id);
+  if (ressource) ressource.fiche = fiche;
 }
