@@ -37,7 +37,27 @@ Le développeur a demandé un virage complet, confirmé comme validé par les ca
 - **Fichiers prévus** : `.env.example`, `DEPLOIEMENT.md`, `frontend/src/app/page.tsx` (écran "Qui êtes-vous ?", personas adaptés), `frontend/src/app/depot/page.tsx` (écran dépôt + liste), `api/src/routes.ts` (routes `POST`/`GET /api/v1/ressources`), `api/src/ressources.ts` (stockage en mémoire, pas de base de données à ce stade).
 - **Tests unitaires prévus** : 1 à 3, sur la validation d'un dépôt (ex. rejet d'un dépôt vide, format minimal attendu).
 - **Étapes ajoutées à la démo** : ouvrir l'app, choisir un persona membre de l'association, déposer un lien, le voir apparaître dans la liste.
-- **Bilan** : _à remplir en fin d'itération._
+- **Bilan** :
+  - **Durée de codage réelle** : 3 minutes (budget 10 min, aucun dépassement).
+  - **Critères satisfaits** : les 3 critères d'acceptation sont remplis — persona → écran dépôt, dépôt visible dans la liste avec le nom du déposant, `/health`/`/sante` (8080) et `/api/v1/ressources` (8081) répondent 200.
+  - **Reporté** : rien de cette itération ; l'analyse IA et la publication Notion restent en itération 2, comme prévu.
+  - **Incident hors codage, résolu avant la clôture** : le déploiement a été bloqué ~20 minutes par un rate-limit anonyme Docker Hub sur la VM partagée (`toomanyrequests` sur `registry:2`, `pgvector/pgvector:pg17`, `seaweedfs`), qui empêchait `registry.internal` et `postgres.internal` de démarrer. L'infra a posé un mirroir (`mirror.gcr.io`, fichier `/etc/containers/registries.conf.d/20-miroir-dockerhub.conf`, hors Ansible) ; une fois en place, le pipeline de démarrage de la plateforme est repassé entièrement au vert (`pipeline finished`, toutes étapes `PASS`) sans aucune autre intervention. Le harnais n'a rien bloqué côté code — ni `npm test`, ni `verifier-deployabilite.sh` (aucune borne).
+  - **Déploiement** : base `team09` créée, images `team09/api:dev` et `team09/frontend:dev` construites et poussées sur `localhost:5000`, `podman compose up -d --force-recreate` effectué. Vérifié localement : `localhost:8080/`, `/health`, `/sante` → 200 ; `localhost:8081/health`, `/sante`, `/api/v1/ressources` → 200.
+  - **Signal** : version 1 enregistrée auprès de PM Lab (`./scripts/signaler-version.sh 1`), à l'URL `https://edition20-team09.exaltemps-space.com`.
+  - **Modifications** :
+    - `.env.example` — liste `PORT=8081`, seule variable lue actuellement (contrat de déployabilité, règle 2).
+    - `DEPLOIEMENT.md` — doc d'une page : services, ports, absence de dépendance externe pour l'instant.
+    - `api/src/ressources.ts` — stockage en mémoire et validation d'un dépôt (rejette contenu/déposant vides) ; sert le critère 2.
+    - `api/src/ressources.test.ts` — 3 tests Vitest sur la validation du dépôt ; sert le point 2 de la DoD.
+    - `api/src/routes.ts` — routes `GET`/`POST /api/v1/ressources` ; sert les critères 2 et 3.
+    - `api/src/server.ts` — lecture du corps JSON pour les `POST` ; sert le critère 2.
+    - `frontend/src/app/personas.ts` — liste des personas membres de l'association ; sert le critère 1.
+    - `frontend/src/app/page.tsx` — écran "Qui êtes-vous ?", navigation vers `/depot` ; sert le critère 1.
+    - `frontend/src/app/depot/page.tsx` — écran de dépôt + liste des ressources déposées ; sert le critère 2.
+    - `frontend/nginx.conf` — en-têtes de sécurité adaptés du gabarit plateforme, routage multi-pages préservé (pas de fallback SPA) ; sert le point 3 de la DoD.
+    - `api/Dockerfile`, `frontend/Dockerfile` — images de base qualifiées `docker.io/library/...` ; sert le point 4 de la DoD.
+    - `podman-compose.yml` — services `frontend` (8080) et `api` (8081) sur `core-network` ; sert le point 4 de la DoD.
+    - `e2e/demo.spec.ts` — étapes "Je choisis mon rôle" et "Je dépose une ressource" ajoutées à la démo.
 
 ## Itération 2 (⚠️ sous réserve de temps) : Chaque ressource déposée reçoit une proposition de fiche organisée par l'IA
 
