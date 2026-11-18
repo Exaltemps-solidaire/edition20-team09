@@ -92,9 +92,37 @@ Le développeur a demandé un virage complet, confirmé comme validé par les ca
     - `DEPLOIEMENT.md` — section "Services externes" mise à jour (passerelle LLM, mode dégradé).
     - `e2e/demo.spec.ts` — étape "L'IA propose une fiche" ajoutée (non rejouée faute de temps ; hors DoD, ne bloque rien).
 
+## Itération 3 — Plan validé le 2026-11-18 (demande du développeur, temps quasi nul) : L'IA lit vraiment la page d'un lien déposé et l'interface est moins brute
+
+- ❗️ Lève l'exclusion posée en itération 1/2 (« extraction réelle depuis une URL : hors budget »), déjà anticipée comme `#3` de "À venir" ; demande explicite du développeur cette fois.
+- ❗️ **Garde-fou de sécurité ajouté d'office, pas en option** : un fetch serveur déclenché par un contenu fourni par un visiteur est un vecteur SSRF classique (le membre dépose `http://postgres.internal` ou `http://openbao.internal:8200` comme "lien", et l'API ferait la requête pour lui depuis le réseau interne). Une URL est donc vérifiée (schéma `http(s)`, hôte ni `*.internal`/`*.local`/`localhost`, ni IP privée/loopback) avant tout fetch, et les redirections ne sont pas suivies (`redirect: "manual"`) pour ne pas contourner le filtre après coup.
+- ✂️ **Temps déclaré par le développeur : quasiment nul** ("plus le temps"). Publication et signal faits immédiatement après vérification locale, **sans tour de test PM Lab préalable** — comme en itération 2.
+- **Dans le périmètre** : si le contenu déposé est réduit à une seule URL publique, l'API la récupère (texte HTML→brut, 5 s de timeout, 4000 caractères max, pas de nouvelle dépendance), l'envoie au LLM, et la fiche affichée cite la source ; sinon message explicite (URL interne refusée, page inaccessible, etc.) ; les deux écrans existants ont une mise en page de base (CSS plat, pas de nouvelle dépendance).
+- **Hors périmètre** : suivi des redirections, extraction de PDF/documents joints, protection SSRF par résolution DNS réelle (seul le nom d'hôte littéral est filtré — une attaque par DNS rebinding n'est pas couverte, risque accepté faute de temps).
+- **Critères d'acceptation** :
+  - Une ressource composée seulement d'une URL publique → l'IA récupère la page, et la fiche affichée cite l'URL source.
+  - Une URL interne/privée ou un schéma non http(s) → refus explicite, aucune requête sortante faite.
+  - Les écrans "Qui êtes-vous ?" et "Déposer une ressource" ont une mise en page de base (espacement, couleurs, typo) au lieu du HTML non stylé.
+- **Hypothèse de l'équipe couverte** : aucune — demande directe du développeur, à faire confirmer par les cadreurs comme les précédentes.
+- **Codage estimé** : réduit au minimum vu le temps quasi nul
+- **Fichiers touchés** : `api/src/llm.ts`, `api/src/llm.test.ts`, `frontend/src/app/depot/page.tsx`, `frontend/src/app/page.tsx`, `frontend/src/app/globals.css`.
+- **Tests unitaires** : 3, sur `extraireUrlUnique`, `estUrlAutorisee` (le garde-fou SSRF) et `extraireTexte`, sans appeler le vrai LLM ni le vrai réseau.
+- **Bilan** :
+  - **Durée de codage réelle** : 2 minutes, aucun dépassement.
+  - **Critères satisfaits** : les 3 — vérifiés en local par appel direct à l'API (`https://example.com` → fiche avec `source`; `http://postgres.internal:5432` → `{"nonExploitable":true,"raison":"adresse interne ou privée refusée"}`) et par inspection visuelle du HTML servi.
+  - **Reporté** : rien de nouveau — le bouton "Publier vers Notion" (déjà reporté en itération 2) reste en tête de la liste "À venir".
+  - **Décision développeur sur le temps** : publication et signal immédiats, sans tour de test PM Lab préalable (temps déclaré quasi nul).
+  - **Ce que le harnais a bloqué ou refusé** : rien — `npm test` passe (9 tests), `verifier-deployabilite.sh` ne signale aucune borne ni alarme.
+  - **Modifications** :
+    - `api/src/llm.ts` — `extraireUrlUnique`, `estUrlAutorisee` (garde-fou SSRF), `extraireTexte` (HTML→texte sans dépendance), `recupererContenuUrl` (fetch avec timeout 5 s, pas de suivi de redirection, 4000 caractères max) ; `proposerFiche` route vers le fetch quand le contenu est une URL seule et ajoute `source` à la fiche ; sert les critères 1 et 2.
+    - `api/src/llm.test.ts` — remplace les tests de l'ancienne `estContenuExploitable` par 3 tests sur `extraireUrlUnique`, `estUrlAutorisee`, `extraireTexte` ; sert le point 2 de la DoD.
+    - `frontend/src/app/depot/page.tsx` — affiche la source (lien) de la fiche, le motif de refus explicite, classes CSS pour la mise en page ; sert les critères 1, 2 et 3.
+    - `frontend/src/app/page.tsx` — classes CSS pour l'écran "Qui êtes-vous ?" ; sert le critère 3.
+    - `frontend/src/app/globals.css` — styles de base (cartes, boutons, espacement) réutilisés par les deux écrans, pas de nouvelle dépendance ; sert le critère 3.
+  - **Démo** : `e2e/demo.spec.ts` non mis à jour cette fois, faute de temps — à faire à la prochaine itération si elle en a.
+
 ## À venir (liste ordonnée, détaillée au fil de l'eau)
 
 1. Bouton "Publier vers Notion" (mock, statut simulé) — reporté de l'itération 2 faute de temps.
 2. Vraie écriture dans Notion, si un jeton d'intégration est fourni par l'équipe.
-3. Extraction réelle de contenu depuis une URL ou un document joint (scraping / parsing).
-4. Stabilisation finale pour le pitch, si le temps restant ne permet plus qu'une itération.
+3. Stabilisation finale pour le pitch, si le temps restant ne permet plus qu'une itération (mettre à jour `e2e/demo.spec.ts` avec les étapes "lien analysé" et "refus explicite" si le temps le permet).

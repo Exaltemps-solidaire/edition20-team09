@@ -4,7 +4,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { PERSONAS } from "../personas";
 
-type Fiche = { titre: string; categorie: string; resume: string } | { nonExploitable: true };
+type Fiche =
+  | { titre: string; categorie: string; resume: string; source?: string }
+  | { nonExploitable: true; raison?: string };
 type Ressource = { id: string; deposant: string; contenu: string; deposeLe: string; fiche?: Fiche };
 
 export default function Depot() {
@@ -56,33 +58,41 @@ export default function Depot() {
   if (!persona) return null;
 
   return (
-    <main>
-      <header>
+    <main className="conteneur">
+      <header className="en-tete">
         <span>Connecté en tant que {persona.nom}</span>
-        <button onClick={changerPersona}>Changer de rôle</button>
+        <button className="bouton-discret" onClick={changerPersona}>Changer de rôle</button>
       </header>
       <h1>Déposer une ressource</h1>
-      <form onSubmit={deposer}>
+      <form className="carte formulaire-depot" onSubmit={deposer}>
         <textarea
           value={contenu}
           onChange={(evenement) => setContenu(evenement.target.value)}
           placeholder="Collez un lien ou un texte à organiser"
         />
-        <button type="submit">Déposer</button>
+        <button className="bouton-principal" type="submit">Déposer</button>
       </form>
-      {erreur && <p role="alert">{erreur}</p>}
+      {erreur && <p className="message-erreur" role="alert">{erreur}</p>}
       <h2>Ressources déposées</h2>
-      <ul>
+      <ul className="liste-ressources">
         {ressources.map((ressource) => (
-          <li key={ressource.id}>
-            <strong>{ressource.deposant}</strong> — {ressource.contenu}
+          <li className="carte" key={ressource.id}>
+            <p><strong>{ressource.deposant}</strong> — {ressource.contenu}</p>
             {ressource.fiche && "nonExploitable" in ressource.fiche && (
-              <p><em>L&apos;IA n&apos;a pas trouvé de texte exploitable (lien seul, sans contenu collé).</em></p>
+              <p className="fiche fiche-vide">
+                L&apos;IA n&apos;a pas produit de fiche
+                {ressource.fiche.raison ? ` (${ressource.fiche.raison})` : " (contenu non exploitable)"}.
+              </p>
             )}
             {ressource.fiche && !("nonExploitable" in ressource.fiche) && (
-              <div>
-                <p><strong>{ressource.fiche.titre}</strong> ({ressource.fiche.categorie})</p>
+              <div className="fiche">
+                <p><strong>{ressource.fiche.titre}</strong> <span className="etiquette">{ressource.fiche.categorie}</span></p>
                 <p>{ressource.fiche.resume}</p>
+                {ressource.fiche.source && (
+                  <p className="source">
+                    Source : <a href={ressource.fiche.source} target="_blank" rel="noreferrer">{ressource.fiche.source}</a>
+                  </p>
+                )}
               </div>
             )}
           </li>

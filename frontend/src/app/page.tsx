@@ -12,13 +12,13 @@ export default function QuiEtesVous() {
   }
 
   return (
-    <main>
+    <main className="conteneur conteneur-etroit">
       <h1>Qui êtes-vous ?</h1>
-      <p>Choisissez le rôle que vous incarnez pour déposer une ressource.</p>
-      <ul>
+      <p className="sous-titre">Choisissez le rôle que vous incarnez pour déposer une ressource.</p>
+      <ul className="liste-personas">
         {PERSONAS.map((persona) => (
           <li key={persona.id}>
-            <button onClick={() => choisir(persona.id)}>{persona.nom}</button>
+            <button className="bouton-persona" onClick={() => choisir(persona.id)}>{persona.nom}</button>
           </li>
         ))}
       </ul>
